@@ -1,0 +1,243 @@
+import { useState, useEffect } from 'react'
+import { supabase } from '../supabase'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, LineChart, Line
+} from 'recharts'
+
+const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+const fmtShort = v => v >= 1000 ? `R$${(v / 1000).toFixed(1)}k` : `R$${v.toFixed(0)}`
+
+const PIE_COLORS = ['#6c3eb5', '#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6']
+
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,.1)' }}>
+      <p style={{ fontWeight: 700, marginBottom: 4, fontSize: 13 }}>{label}</p>
+      {payload.map((p, i) => (
+        <p key={i} style={{ color: p.color, fontSize: 13 }}>{fmt(p.value)}</p>
+      ))}
+    </div>
+  )
+}
+
+export default function Dashboard() {
+  const [kpis, setKpis] = useState({ today: 0, month: 0, products: 0, customers: 0, lowStock: 0, salesCount: 0 })
+  const [recentSales, setRecentSales] = useState([])
+  const [dailyData, setDailyData] = useState([])
+  const [paymentData, setPaymentData] = useState([])
+  const [sellerData, setSellerData] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => { load() }, [])
+
+  async function load() {
+    const today = new Date().toISOString().split('T')[0]
+    const monthStart = today.slice(0, 7) + '-01'
+
+    // Últimos 7 dias
+    const d7 = new Date(); d7.setDate(d7.getDate() - 6)
+    const week7Start = d7.toISOString().split('T')[0]
+
+    const [salesRes, todayRes, productsRes, customersRes, stockRes, recentRes, weekRes] = await Promise.all([
+      supabase.from('sales').select('total_amount').gte('created_at', monthStart + 'T00:00:00'),
+      supabase.from('sales').select('total_amount').gte('created_at', today + 'T00:00:00'),
+      supabase.from('products').select('id', { count: 'exact', head: true }),
+      supabase.from('customers').select('id', { count: 'exact', head: true }),
+      supabase.from('products').select('quantity').lt('quantity', 5),
+      supabase.from('sales')
+        .select('id, total_amount, created_at, customers(name), sellers(name), payment_methods(name)')
+        .order('created_at', { ascending: false }).limit(8),
+      supabase.from('sales')
+        .select('total_amount, created_at, payment_methods(name), sellers(name)')
+        .gte('created_at', week7Start + 'T00:00:00'),
+    ])
+
+    const monthTotal = (salesRes.data || []).reduce((s, x) => s + Number(x.total_amount), 0)
+    const todayTotal = (todayRes.data || []).reduce((s, x) => s + Number(x.total_amount), 0)
+
+    setKpis({
+      today: todayTotal,
+      month: monthTotal,
+      products: productsRes.count || 0,
+      customers: customersRes.count || 0,
+      lowStock: (stockRes.data || []).length,
+      salesCount: (salesRes.data || []).length,
+    })
+    setRecentSales(recentRes.data || [])
+
+    // Gráfico de vendas — últimos 7 dias
+    const salesByDay = {}
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i)
+      const key = d.toISOString().split('T')[0]
+      const label = d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' })
+      salesByDay[key] = { label, total: 0 }
+    }
+    ;(weekRes.data || []).forEach(s => {
+      const key = s.created_at.split('T')[0]
+      if (salesByDay[key]) salesByDay[key].total += Number(s.total_amount)
+    })
+    setDailyData(Object.values(salesByDay).map(d => ({ name: d.label, Vendas: d.total })))
+
+    // Gráfico de pizza — por forma de pagamento
+    const pmMap = {}
+    ;(weekRes.data || []).forEach(s => {
+      const name = s.payment_methods?.name || 'Outros'
+      pmMap[name] = (pmMap[name] || 0) + Number(s.total_amount)
+    })
+    setPaymentData(Object.entries(pmMap).map(([name, value]) => ({ name, value })))
+
+    // Gráfico de barras — por vendedor (mês)
+    const sellerMap = {}
+    ;(salesRes.data || []).forEach(s => {})
+    // Re-fetch com seller info para o mês
+    const { data: monthSales } = await supabase.from('sales')
+      .select('total_amount, sellers(name)')
+      .gte('created_at', monthStart + 'T00:00:00')
+    ;(monthSales || []).forEach(s => {
+      const name = s.sellers?.name || 'Sem vendedor'
+      sellerMap[name] = (sellerMap[name] || 0) + Number(s.total_amount)
+    })
+    setSellerData(Object.entries(sellerMap).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, Vendas: value })))
+
+    setLoading(false)
+  }
+
+  if (loading) return (
+    <div className="page-loading">
+      <span className="spinner" style={{ width: 32, height: 32, borderWidth: 3, color: 'var(--primary)' }} />
+    </div>
+  )
+
+  return (
+    <>
+      {/* KPIs */}
+      <div className="kpi-grid">
+        <div className="kpi-card">
+          <div className="kpi-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div className="kpi-label">Vendas Hoje</div>
+          <div className="kpi-value">{fmt(kpis.today)}</div>
+          <div className="kpi-sub">dia atual</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div className="kpi-label">Vendas no Mês</div>
+          <div className="kpi-value">{fmt(kpis.month)}</div>
+          <div className="kpi-sub">{kpis.salesCount} pedidos</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-icon amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+          <div className="kpi-label">Produtos</div>
+          <div className="kpi-value">{kpis.products}</div>
+          <div className="kpi-sub">cadastrados</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div className="kpi-label">Clientes</div>
+          <div className="kpi-value">{kpis.customers}</div>
+          <div className="kpi-sub">cadastrados</div>
+        </div>
+        {kpis.lowStock > 0 && (
+          <div className="kpi-card">
+            <div className="kpi-icon red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+            <div className="kpi-label">Estoque Baixo</div>
+            <div className="kpi-value" style={{ color: 'var(--danger)' }}>{kpis.lowStock}</div>
+            <div className="kpi-sub">produtos &lt; 5 unidades</div>
+          </div>
+        )}
+      </div>
+
+      {/* Gráficos — linha 1 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, marginBottom: 20 }}>
+        {/* Barras: vendas últimos 7 dias */}
+        <div className="card">
+          <div className="card-header"><h3>Vendas — Últimos 7 Dias</h3></div>
+          <div style={{ padding: '8px 16px 20px' }}>
+            {dailyData.every(d => d.Vendas === 0) ? (
+              <div className="empty-state" style={{ padding: 32 }}><p>Nenhuma venda nos últimos 7 dias</p></div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={dailyData} barSize={32}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} />
+                  <YAxis tickFormatter={fmtShort} tick={{ fontSize: 11, fill: '#6b7280' }} width={60} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="Vendas" fill="#6c3eb5" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Pizza: por forma de pagamento */}
+        <div className="card">
+          <div className="card-header"><h3>Por Forma de Pgto.</h3></div>
+          <div style={{ padding: '8px 0 20px' }}>
+            {paymentData.length === 0 ? (
+              <div className="empty-state" style={{ padding: 32 }}><p>Sem dados</p></div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={paymentData} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
+                    dataKey="value" paddingAngle={3}>
+                    {paymentData.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={v => fmt(v)} />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Gráfico: ranking vendedores no mês */}
+      {sellerData.length > 0 && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-header"><h3>Ranking de Vendedores — Mês Atual</h3></div>
+          <div style={{ padding: '8px 16px 20px' }}>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={sellerData} layout="vertical" barSize={20}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                <XAxis type="number" tickFormatter={fmtShort} tick={{ fontSize: 11, fill: '#6b7280' }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 13, fill: '#374151' }} width={90} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="Vendas" fill="#10b981" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Últimas vendas */}
+      <div className="card">
+        <div className="card-header"><h3>Últimas Vendas</h3></div>
+        {recentSales.length === 0 ? (
+          <div className="empty-state"><p>Nenhuma venda registrada ainda</p></div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Cliente</th><th>Vendedor</th><th>Pgto.</th><th>Valor</th><th>Data</th></tr></thead>
+              <tbody>
+                {recentSales.map((s, i) => (
+                  <tr key={s.id}>
+                    <td><span className="sku-tag">#{i + 1}</span></td>
+                    <td>{s.customers?.name || <span className="text-muted">—</span>}</td>
+                    <td>{s.sellers?.name || <span className="text-muted">—</span>}</td>
+                    <td>{s.payment_methods?.name || <span className="text-muted">—</span>}</td>
+                    <td><strong>{fmt(s.total_amount)}</strong></td>
+                    <td className="text-muted text-sm">{new Date(s.created_at).toLocaleString('pt-BR')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
