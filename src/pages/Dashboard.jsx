@@ -8,15 +8,15 @@ import {
 const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 const fmtShort = v => v >= 1000 ? `R$${(v / 1000).toFixed(1)}k` : `R$${v.toFixed(0)}`
 
-const PIE_COLORS = ['#6c3eb5', '#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6']
+const PIE_COLORS = ['#6c3eb5','#f59e0b','#10b981','#3b82f6','#8b5cf6','#f87171','#34d399','#60a5fa']
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px', boxShadow: '0 4px 12px rgba(0,0,0,.1)' }}>
-      <p style={{ fontWeight: 700, marginBottom: 4, fontSize: 13 }}>{label}</p>
+    <div style={{ background: '#fff', border: '1px solid #e5e0f5', borderRadius: 10, padding: '10px 14px', boxShadow: '0 8px 24px rgba(30,27,75,.12)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <p style={{ fontWeight: 700, marginBottom: 4, fontSize: 12, color: '#4b4869' }}>{label}</p>
       {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color, fontSize: 13 }}>{fmt(p.value)}</p>
+        <p key={i} style={{ color: p.color, fontSize: 13, fontWeight: 600 }}>{fmt(p.value)}</p>
       ))}
     </div>
   )
@@ -160,11 +160,17 @@ export default function Dashboard() {
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={dailyData} barSize={32}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} />
-                  <YAxis tickFormatter={fmtShort} tick={{ fontSize: 11, fill: '#6b7280' }} width={60} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="Vendas" fill="#6c3eb5" radius={[4, 4, 0, 0]} />
+                  <defs>
+                    <linearGradient id="barGradPurple" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#6c3eb5" stopOpacity={0.85} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e0f5" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={fmtShort} tick={{ fontSize: 11, fill: '#6b7280' }} width={60} axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(108,62,181,.06)' }} />
+                  <Bar dataKey="Vendas" fill="url(#barGradPurple)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -180,8 +186,8 @@ export default function Dashboard() {
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
-                  <Pie data={paymentData} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
-                    dataKey="value" paddingAngle={3}>
+                  <Pie data={paymentData} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
+                    dataKey="value" paddingAngle={4} strokeWidth={0}>
                     {paymentData.map((_, i) => (
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
@@ -202,11 +208,17 @@ export default function Dashboard() {
           <div style={{ padding: '8px 16px 20px' }}>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={sellerData} layout="vertical" barSize={20}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                <XAxis type="number" tickFormatter={fmtShort} tick={{ fontSize: 11, fill: '#6b7280' }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 13, fill: '#374151' }} width={90} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="Vendas" fill="#10b981" radius={[0, 4, 4, 0]} />
+                <defs>
+                  <linearGradient id="barGradGreen" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#10b981" />
+                    <stop offset="100%" stopColor="#34d399" stopOpacity={0.90} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e0f5" horizontal={false} />
+                <XAxis type="number" tickFormatter={fmtShort} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 13, fill: '#4b4869' }} width={90} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(16,185,129,.06)' }} />
+                <Bar dataKey="Vendas" fill="url(#barGradGreen)" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
