@@ -2,20 +2,45 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
 const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+const fmtCompact = v => {
+  if (v >= 1000000) return `R$${(v/1000000).toFixed(2)}M`
+  if (v >= 1000) return `R$${(v/1000).toFixed(1)}k`
+  return fmt(v)
+}
 const today = () => new Date().toISOString().split('T')[0]
 const monthStart = () => today().slice(0, 7) + '-01'
+
+const CHART_COLORS = ['#6c3eb5','#f59e0b','#10b981','#3b82f6','#8b5cf6','#f87171','#34d399','#60a5fa']
+
+function CssBar({ value, max, color, label, sub }) {
+  const pct = max > 0 ? (value / max * 100) : 0
+  return (
+    <div className="rpt-bar-row">
+      <div className="rpt-bar-meta">
+        <span className="rpt-bar-label">{label}</span>
+        <span className="rpt-bar-value">{fmt(value)}</span>
+      </div>
+      <div className="rpt-bar-track">
+        <div className="rpt-bar-fill" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      {sub && <span className="rpt-bar-sub">{sub}</span>}
+    </div>
+  )
+}
 
 export default function Reports() {
   const [from, setFrom] = useState(monthStart())
   const [to, setTo] = useState(today())
   const [sales, setSales] = useState([])
   const [loading, setLoading] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   const [summary, setSummary] = useState({ total: 0, count: 0, ticket: 0 })
 
   useEffect(() => { load() }, [])
 
   async function load() {
     setLoading(true)
+    setLoaded(false)
     const { data } = await supabase
       .from('sales')
       .select('id, total_amount, created_at, notes, customers(name), sellers(name), payment_methods(name), sale_items(sku, description, quantity, unit_price, total_price)')
@@ -28,23 +53,21 @@ export default function Reports() {
     setSales(rows)
     setSummary({ total, count: rows.length, ticket: rows.length ? total / rows.length : 0 })
     setLoading(false)
+    setTimeout(() => setLoaded(true), 30)
   }
 
-  // Resumo por vendedor
   const bySeller = sales.reduce((acc, s) => {
     const name = s.sellers?.name || 'Sem vendedor'
     acc[name] = (acc[name] || 0) + Number(s.total_amount)
     return acc
   }, {})
 
-  // Resumo por forma de pagamento
   const byPayment = sales.reduce((acc, s) => {
     const name = s.payment_methods?.name || 'Sem info'
     acc[name] = (acc[name] || 0) + Number(s.total_amount)
     return acc
   }, {})
 
-  // Resumo por produto (itens)
   const byProduct = sales.flatMap(s => s.sale_items || []).reduce((acc, item) => {
     const key = item.sku
     if (!acc[key]) acc[key] = { sku: item.sku, description: item.description, qty: 0, total: 0 }
@@ -53,130 +76,212 @@ export default function Reports() {
     return acc
   }, {})
 
-  const topProducts = Object.values(byProduct).sort((a, b) => b.total - a.total).slice(0, 10)
+  const topProducts = Object.values(byProduct).sort((a, b) => b.total - a.total).slice(0, 8)
+
+  const sellerEntries = Object.entries(bySeller).sort((a, b) => b[1] - a[1])
+  const paymentEntries = Object.entries(byPayment).sort((a, b) => b[1] - a[1])
+  const maxSeller = sellerEntries[0]?.[1] || 1
+  const maxPayment = paymentEntries[0]?.[1] || 1
+  const maxProduct = topProducts[0]?.total || 1
+
+  const dateLabel = (() => {
+    const f = new Date(from + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+    const t = new Date(to + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+    return `${f} — ${t}`
+  })()
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Filtros */}
-      <div className="card">
-        <div className="card-header">
-          <h3>Relatório de Vendas</h3>
-          <div className="card-header-actions">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={{ margin: 0, whiteSpace: 'nowrap' }}>De:</label>
-              <input type="date" value={from} onChange={e => setFrom(e.target.value)} style={{ width: 150 }} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={{ margin: 0, whiteSpace: 'nowrap' }}>Até:</label>
-              <input type="date" value={to} onChange={e => setTo(e.target.value)} style={{ width: 150 }} />
-            </div>
-            <button className="btn btn-primary" onClick={load} disabled={loading}>
-              {loading ? <span className="spinner" /> : 'Filtrar'}
-            </button>
-          </div>
-        </div>
-      </div>
+    <div className={`rpt-root ${loaded ? 'rpt-loaded' : ''}`}>
 
-      {/* KPIs do período */}
-      <div className="kpi-grid">
-        <div className="kpi-card">
-          <div className="kpi-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-          <div className="kpi-label">Total do Período</div>
-          <div className="kpi-value">{fmt(summary.total)}</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
-          <div className="kpi-label">Nº de Vendas</div>
-          <div className="kpi-value">{summary.count}</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-icon amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
-          <div className="kpi-label">Ticket Médio</div>
-          <div className="kpi-value">{fmt(summary.ticket)}</div>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        {/* Por vendedor */}
-        <div className="card">
-          <div className="card-header"><h3>Por Vendedor</h3></div>
-          <div className="table-wrap">
-            {Object.keys(bySeller).length === 0 ? <div className="empty-state"><p>Sem dados</p></div> : (
-              <table>
-                <thead><tr><th>Vendedor</th><th className="text-right">Total</th></tr></thead>
-                <tbody>
-                  {Object.entries(bySeller).sort((a, b) => b[1] - a[1]).map(([name, val]) => (
-                    <tr key={name}><td>{name}</td><td className="text-right"><strong>{fmt(val)}</strong></td></tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* ── FILTER BAR ── */}
+      <div className="rpt-filter">
+        <div className="rpt-filter-inner">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span className="rpt-filter-label">De</span>
+          <input type="date" value={from} onChange={e => setFrom(e.target.value)} className="rpt-date-input" />
+          <div className="rpt-filter-sep" />
+          <span className="rpt-filter-label">Até</span>
+          <input type="date" value={to} onChange={e => setTo(e.target.value)} className="rpt-date-input" />
+          <button className="rpt-filter-btn" onClick={load} disabled={loading}>
+            {loading ? <span className="spinner" style={{ width: 14, height: 14 }} /> : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Gerar
+              </>
             )}
+          </button>
+        </div>
+      </div>
+
+      {/* ── HERO BANNER ── */}
+      <div className="rpt-hero">
+        <div className="rpt-hero-bg" />
+        <div className="rpt-hero-content">
+          <div className="rpt-hero-left">
+            <div className="rpt-period-tag">{dateLabel}</div>
+            <div className="rpt-hero-label">Receita Total</div>
+            <div className="rpt-hero-value">
+              {loading ? '—' : fmtCompact(summary.total)}
+            </div>
+            <div className="rpt-hero-exact">{loading ? '' : fmt(summary.total)}</div>
+          </div>
+          <div className="rpt-hero-right">
+            <div className="rpt-hero-stat">
+              <span className="rpt-hero-stat-n">{summary.count}</span>
+              <span className="rpt-hero-stat-l">vendas</span>
+            </div>
+            <div className="rpt-hero-divider" />
+            <div className="rpt-hero-stat">
+              <span className="rpt-hero-stat-n">{loading ? '—' : fmtCompact(summary.ticket)}</span>
+              <span className="rpt-hero-stat-l">ticket médio</span>
+            </div>
+            <div className="rpt-hero-divider" />
+            <div className="rpt-hero-stat">
+              <span className="rpt-hero-stat-n">{topProducts.length}</span>
+              <span className="rpt-hero-stat-l">SKUs vendidos</span>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Por forma de pagamento */}
-        <div className="card">
-          <div className="card-header"><h3>Por Forma de Pagamento</h3></div>
-          <div className="table-wrap">
-            {Object.keys(byPayment).length === 0 ? <div className="empty-state"><p>Sem dados</p></div> : (
-              <table>
-                <thead><tr><th>Forma</th><th className="text-right">Total</th></tr></thead>
-                <tbody>
-                  {Object.entries(byPayment).sort((a, b) => b[1] - a[1]).map(([name, val]) => (
-                    <tr key={name}><td>{name}</td><td className="text-right"><strong>{fmt(val)}</strong></td></tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+      {/* ── ANALYSIS GRID ── */}
+      <div className="rpt-analysis-grid">
+
+        {/* Vendedores */}
+        <div className="rpt-section">
+          <div className="rpt-section-header">
+            <div className="rpt-section-accent" />
+            <span className="rpt-section-title">Performance por Vendedor</span>
+            <span className="rpt-section-count">{sellerEntries.length}</span>
+          </div>
+          {sellerEntries.length === 0 ? (
+            <div className="rpt-empty">Sem dados no período</div>
+          ) : sellerEntries.map(([name, val], i) => (
+            <CssBar
+              key={name}
+              label={name}
+              value={val}
+              max={maxSeller}
+              color={CHART_COLORS[i % CHART_COLORS.length]}
+              sub={`${((val / summary.total) * 100).toFixed(1)}% do total`}
+            />
+          ))}
+        </div>
+
+        {/* Pagamentos */}
+        <div className="rpt-section">
+          <div className="rpt-section-header">
+            <div className="rpt-section-accent" style={{ background: '#f59e0b' }} />
+            <span className="rpt-section-title">Forma de Pagamento</span>
+            <span className="rpt-section-count">{paymentEntries.length}</span>
+          </div>
+          {paymentEntries.length === 0 ? (
+            <div className="rpt-empty">Sem dados no período</div>
+          ) : paymentEntries.map(([name, val], i) => (
+            <CssBar
+              key={name}
+              label={name}
+              value={val}
+              max={maxPayment}
+              color={CHART_COLORS[(i + 2) % CHART_COLORS.length]}
+              sub={`${((val / summary.total) * 100).toFixed(1)}%`}
+            />
+          ))}
+        </div>
+
+      </div>
+
+      {/* ── TOP PRODUTOS ── */}
+      {topProducts.length > 0 && (
+        <div className="rpt-products">
+          <div className="rpt-section-header">
+            <div className="rpt-section-accent" style={{ background: '#10b981' }} />
+            <span className="rpt-section-title">Top Produtos por Receita</span>
+            <span className="rpt-section-count">{topProducts.length} SKUs</span>
+          </div>
+          <div className="rpt-products-grid">
+            {topProducts.map((p, i) => (
+              <div className="rpt-product-card" key={p.sku} style={{ '--delay': `${i * 40}ms` }}>
+                <div className="rpt-product-rank">#{String(i + 1).padStart(2, '0')}</div>
+                <div className="rpt-product-info">
+                  <span className="rpt-product-sku">{p.sku}</span>
+                  <span className="rpt-product-name">{p.description}</span>
+                </div>
+                <div className="rpt-product-stats">
+                  <div className="rpt-product-total">{fmt(p.total)}</div>
+                  <div className="rpt-product-qty">{p.qty} un.</div>
+                </div>
+                <div className="rpt-product-bar">
+                  <div className="rpt-product-bar-fill" style={{
+                    width: `${(p.total / maxProduct * 100).toFixed(1)}%`,
+                    background: CHART_COLORS[i % CHART_COLORS.length]
+                  }} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+      )}
+
+      {/* ── DETALHAMENTO ── */}
+      <div className="rpt-detail">
+        <div className="rpt-section-header">
+          <div className="rpt-section-accent" style={{ background: '#3b82f6' }} />
+          <span className="rpt-section-title">Detalhamento das Vendas</span>
+          <span className="rpt-section-count">{sales.length} registros</span>
+        </div>
+        {sales.length === 0 ? (
+          <div className="rpt-empty">Nenhuma venda no período selecionado</div>
+        ) : (
+          <div className="rpt-table-wrap">
+            <table className="rpt-table">
+              <thead>
+                <tr>
+                  <th>Data / Hora</th>
+                  <th>Cliente</th>
+                  <th>Vendedor</th>
+                  <th>Pagamento</th>
+                  <th>Itens</th>
+                  <th style={{ textAlign: 'right' }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sales.map((s, i) => {
+                  const dt = new Date(s.created_at)
+                  return (
+                    <tr key={s.id} style={{ '--row-delay': `${i * 20}ms` }}>
+                      <td>
+                        <div className="rpt-datetime">
+                          <span className="rpt-date">{dt.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+                          <span className="rpt-time">{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      </td>
+                      <td>{s.customers?.name || <span className="rpt-na">Consumidor Final</span>}</td>
+                      <td>
+                        {s.sellers?.name
+                          ? <span className="rpt-seller-tag">{s.sellers.name}</span>
+                          : <span className="rpt-na">—</span>}
+                      </td>
+                      <td>{s.payment_methods?.name || <span className="rpt-na">—</span>}</td>
+                      <td><span className="rpt-items-count">{(s.sale_items || []).length}</span></td>
+                      <td style={{ textAlign: 'right' }}>
+                        <strong className="rpt-row-total">{fmt(s.total_amount)}</strong>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={5} style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.6px', paddingTop: 16 }}>Total do Período</td>
+                  <td style={{ textAlign: 'right', fontWeight: 800, fontSize: 15, color: 'var(--primary)', paddingTop: 16 }}>{fmt(summary.total)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Top produtos */}
-      <div className="card">
-        <div className="card-header"><h3>Produtos Mais Vendidos (Top 10)</h3></div>
-        <div className="table-wrap">
-          {topProducts.length === 0 ? <div className="empty-state"><p>Sem dados no período</p></div> : (
-            <table>
-              <thead><tr><th>SKU</th><th>Produto</th><th>Qtd. Vendida</th><th className="text-right">Total</th></tr></thead>
-              <tbody>
-                {topProducts.map(p => (
-                  <tr key={p.sku}>
-                    <td><span className="sku-tag">{p.sku}</span></td>
-                    <td>{p.description}</td>
-                    <td><span className="badge purple">{p.qty} un.</span></td>
-                    <td className="text-right"><strong>{fmt(p.total)}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* Detalhamento das vendas */}
-      <div className="card">
-        <div className="card-header"><h3>Detalhamento das Vendas ({sales.length})</h3></div>
-        <div className="table-wrap">
-          {sales.length === 0 ? <div className="empty-state"><p>Nenhuma venda no período selecionado</p></div> : (
-            <table>
-              <thead><tr><th>Data</th><th>Cliente</th><th>Vendedor</th><th>Pgto.</th><th>Itens</th><th className="text-right">Total</th></tr></thead>
-              <tbody>
-                {sales.map(s => (
-                  <tr key={s.id}>
-                    <td className="text-muted text-sm">{new Date(s.created_at).toLocaleString('pt-BR')}</td>
-                    <td>{s.customers?.name || <span className="text-muted">Consumidor Final</span>}</td>
-                    <td>{s.sellers?.name || <span className="text-muted">—</span>}</td>
-                    <td>{s.payment_methods?.name || <span className="text-muted">—</span>}</td>
-                    <td>{(s.sale_items || []).length} itens</td>
-                    <td className="text-right"><strong>{fmt(s.total_amount)}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
     </div>
   )
 }
