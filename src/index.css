@@ -280,7 +280,7 @@ body {
   gap: 12px;
 }
 .topbar h2 { font-size: 15px; font-weight: 700; flex: 1; color: var(--text); letter-spacing: -.1px; }
-.page-content { padding: 28px; }
+.page-content { padding: 16px 28px 28px; }
 
 /* ── KPI STRIP (Dashboard horizontal) ── */
 .kpi-strip {
@@ -288,9 +288,9 @@ body {
   background: var(--surface-1);
   border-radius: var(--radius-lg);
   box-shadow:
-    0 4px 10px rgba(28,25,23,.22),
-    0 14px 40px rgba(28,25,23,.20),
-    0 0 0 1.5px rgba(28,25,23,.18);
+    0 2px 6px rgba(28,25,23,.14),
+    0 8px 28px rgba(28,25,23,.16),
+    0 0 0 1px rgba(28,25,23,.12);
   margin-bottom: 24px;
   overflow: hidden;
 }
