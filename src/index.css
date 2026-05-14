@@ -372,8 +372,10 @@ body {
 .card {
   background: var(--surface-1);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-1);
-  border: 1px solid var(--border);
+  box-shadow:
+    0 2px 4px rgba(28,25,23,.07),
+    0 6px 20px rgba(28,25,23,.09),
+    0 0 0 1px rgba(28,25,23,.06);
   overflow: hidden;
 }
 .card-header {
@@ -388,35 +390,43 @@ body {
 .table-wrap {
   overflow-x: auto;
   border-radius: var(--radius-lg);
-  box-shadow: 0 1px 4px rgba(28,25,23,.08), 0 4px 16px rgba(28,25,23,.06);
-  border: 1px solid var(--border);
+  box-shadow:
+    0 2px 4px rgba(28,25,23,.07),
+    0 6px 20px rgba(28,25,23,.09),
+    0 0 0 1px rgba(28,25,23,.06);
 }
 table { width: 100%; border-collapse: collapse; }
 th {
   text-align: left; padding: 12px 18px;
   font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .9px;
-  color: var(--text-secondary);
-  background: #f0ede8;
-  border-bottom: 2px solid #d6d0c8;
+  text-transform: uppercase; letter-spacing: .8px;
+  color: #ffffff;
+  background: var(--primary);
+  border-bottom: none;
   white-space: nowrap;
 }
+th:first-child { border-radius: var(--radius-lg) 0 0 0; }
+th:last-child  { border-radius: 0 var(--radius-lg) 0 0; }
 [data-theme="dark"] th {
-  background: #1e1a14;
-  border-bottom-color: #3a3328;
-  color: #a09880;
+  background: #111010;
+  color: rgba(255,255,255,.85);
 }
+tbody tr:nth-child(odd)  td { background: var(--surface-1); }
+tbody tr:nth-child(even) td { background: #f7f5f2; }
+[data-theme="dark"] tbody tr:nth-child(even) td { background: rgba(255,255,255,.025); }
 td {
-  padding: 13px 18px;
+  padding: 11px 18px;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
   vertical-align: middle;
   color: var(--text-secondary);
-  transition: background .12s;
+  transition: background .10s;
 }
 tr:last-child td { border-bottom: none; }
-tr:hover td { background: #faf7f2; }
-[data-theme="dark"] tr:hover td { background: rgba(255,255,255,.03); }
+tr:last-child td:first-child { border-radius: 0 0 0 var(--radius-lg); }
+tr:last-child td:last-child  { border-radius: 0 0 var(--radius-lg) 0; }
+tbody tr:hover td { background: #fef9ee !important; }
+[data-theme="dark"] tbody tr:hover td { background: rgba(217,119,6,.08) !important; }
 .empty-state { text-align: center; padding: 56px 20px; color: var(--text-muted); }
 .empty-state p { font-size: 14px; font-weight: 500; }
 
