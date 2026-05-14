@@ -105,7 +105,7 @@ function Receipt({ sale, onClose }) {
 }
 
 export default function PDV() {
-  const { toast } = useApp()
+  const { toast, session } = useApp()
   const [products, setProducts] = useState([])
   const [sellers, setSellers] = useState([])
   const [customers, setCustomers] = useState([])
@@ -174,6 +174,7 @@ export default function PDV() {
       payment_method_id: sale.payment_method_id,
       total_amount: total,
       notes: sale.notes || null,
+      user_id: session.user.id,
     }).select().single()
 
     if (saleErr) { toast(saleErr.message, 'error'); setSaving(false); return }
@@ -185,6 +186,7 @@ export default function PDV() {
       description: x.description,
       quantity: x.qty,
       unit_price: x.unit_price,
+      user_id: session.user.id,
     }))
 
     const { error: itemsErr } = await supabase.from('sale_items').insert(saleItems)
