@@ -21,6 +21,16 @@ export default function App() {
   const [session, setSession] = useState(undefined)
   const [page, setPage] = useState('dashboard')
   const [toasts, setToasts] = useState([])
+  const [theme, setTheme] = useState(() => localStorage.getItem('mf-theme') || 'light')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('mf-theme', theme)
+  }, [theme])
+
+  function toggleTheme() {
+    setTheme(t => t === 'light' ? 'dark' : 'light')
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -40,7 +50,7 @@ export default function App() {
   const Page = pages[page] || Dashboard
 
   return (
-    <AppContext.Provider value={{ session, toast, setPage }}>
+    <AppContext.Provider value={{ session, toast, setPage, theme, toggleTheme }}>
       {!session ? (
         <Auth />
       ) : (
