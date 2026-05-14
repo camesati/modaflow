@@ -6,7 +6,7 @@ const empty = { sku: '', description: '', quantity: '', unit_cost: '', notes: ''
 const fmt = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
 export default function StockEntries() {
-  const { toast } = useApp()
+  const { toast, session } = useApp()
   const [entries, setEntries] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -44,7 +44,7 @@ export default function StockEntries() {
 
   async function save(e) {
     e.preventDefault(); setSaving(true)
-    const data = { sku: form.sku.trim(), description: form.description.trim(), quantity: parseInt(form.quantity), unit_cost: parseFloat(form.unit_cost) || 0, notes: form.notes || null }
+    const data = { sku: form.sku.trim(), description: form.description.trim(), quantity: parseInt(form.quantity), unit_cost: parseFloat(form.unit_cost) || 0, notes: form.notes || null, user_id: session.user.id }
 
     const { error: entryErr } = await supabase.from('stock_entries').insert(data)
     if (entryErr) { toast(entryErr.message, 'error'); setSaving(false); return }
