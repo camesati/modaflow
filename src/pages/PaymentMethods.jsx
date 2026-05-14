@@ -7,7 +7,7 @@ const TYPE_COLORS = { credit: 'blue', debit: 'purple', pix: 'green', cash: 'ambe
 const empty = { name: '', type: 'credit', active: true }
 
 export default function PaymentMethods() {
-  const { toast } = useApp()
+  const { toast, session } = useApp()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null)
@@ -32,7 +32,7 @@ export default function PaymentMethods() {
     const data = { name: form.name.trim(), type: form.type, active: form.active }
     let error
     if (modal === 'create') {
-      ;({ error } = await supabase.from('payment_methods').insert(data))
+      ;({ error } = await supabase.from('payment_methods').insert({ ...data, user_id: session.user.id }))
     } else {
       ;({ error } = await supabase.from('payment_methods').update(data).eq('id', modal.id))
     }

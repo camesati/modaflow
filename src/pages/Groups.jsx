@@ -3,7 +3,7 @@ import { supabase } from '../supabase'
 import { useApp } from '../App'
 
 export default function Groups() {
-  const { toast } = useApp()
+  const { toast, session } = useApp()
   const [groups, setGroups] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -36,7 +36,7 @@ export default function Groups() {
     const data = { name: groupForm.name.trim() }
     let error
     if (groupModal === 'create') {
-      ;({ error } = await supabase.from('groups').insert(data))
+      ;({ error } = await supabase.from('groups').insert({ ...data, user_id: session.user.id }))
     } else {
       ;({ error } = await supabase.from('groups').update(data).eq('id', groupModal.id))
     }
@@ -61,7 +61,7 @@ export default function Groups() {
     const data = { name: catForm.name.trim(), group_id: catForm.group_id || null }
     let error
     if (catModal.type === 'create') {
-      ;({ error } = await supabase.from('categories').insert(data))
+      ;({ error } = await supabase.from('categories').insert({ ...data, user_id: session.user.id }))
     } else {
       ;({ error } = await supabase.from('categories').update(data).eq('id', catModal.id))
     }

@@ -5,7 +5,7 @@ import { useApp } from '../App'
 const empty = { sku: '', description: '', unit_price: '', quantity: '', group_id: '', category_id: '' }
 
 export default function Products() {
-  const { toast } = useApp()
+  const { toast, session } = useApp()
   const [items, setItems] = useState([])
   const [groups, setGroups] = useState([])
   const [categories, setCategories] = useState([])
@@ -43,7 +43,7 @@ export default function Products() {
     const data = { sku: form.sku.trim(), description: form.description.trim(), unit_price: parseFloat(form.unit_price) || 0, quantity: parseInt(form.quantity) || 0, group_id: form.group_id || null, category_id: form.category_id || null }
     let error
     if (modal === 'create') {
-      ;({ error } = await supabase.from('products').insert(data))
+      ;({ error } = await supabase.from('products').insert({ ...data, user_id: session.user.id }))
     } else {
       ;({ error } = await supabase.from('products').update(data).eq('id', modal.id))
     }

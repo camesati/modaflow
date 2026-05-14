@@ -5,7 +5,7 @@ import { useApp } from '../App'
 const empty = { seller_code: '', name: '', active: true }
 
 export default function Sellers() {
-  const { toast } = useApp()
+  const { toast, session } = useApp()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null)
@@ -30,7 +30,7 @@ export default function Sellers() {
     const data = { seller_code: form.seller_code.trim(), name: form.name.trim(), active: form.active }
     let error
     if (modal === 'create') {
-      ;({ error } = await supabase.from('sellers').insert(data))
+      ;({ error } = await supabase.from('sellers').insert({ ...data, user_id: session.user.id }))
     } else {
       ;({ error } = await supabase.from('sellers').update(data).eq('id', modal.id))
     }

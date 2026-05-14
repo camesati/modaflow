@@ -5,7 +5,7 @@ import { useApp } from '../App'
 const empty = { name: '', cpf: '', birth_date: '', email: '', profession: '' }
 
 export default function Customers() {
-  const { toast } = useApp()
+  const { toast, session } = useApp()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -34,7 +34,7 @@ export default function Customers() {
     const data = { name: form.name.trim(), cpf: form.cpf || null, birth_date: form.birth_date || null, email: form.email || null, profession: form.profession || null }
     let error
     if (modal === 'create') {
-      ;({ error } = await supabase.from('customers').insert(data))
+      ;({ error } = await supabase.from('customers').insert({ ...data, user_id: session.user.id }))
     } else {
       ;({ error } = await supabase.from('customers').update(data).eq('id', modal.id))
     }
