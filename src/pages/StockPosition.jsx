@@ -78,31 +78,56 @@ export default function StockPosition() {
 
   return (
     <>
-      {/* KPIs */}
-      <div className="kpi-grid" style={{ marginBottom: 20 }}>
-        <div className="kpi-card">
-          <div className="kpi-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
-          <div className="kpi-label">Itens em Estoque</div>
-          <div className="kpi-value">{totalUnits}</div>
-          <div className="kpi-sub">unidades disponíveis</div>
+      {/* KPI Strip */}
+      <div className="kpi-strip">
+        <div className="kpi-item">
+          <div className="kpi-item-icon purple">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          </div>
+          <div className="kpi-item-body">
+            <div className="kpi-item-label">Itens em Estoque</div>
+            <div className="kpi-item-value">{totalUnits}</div>
+            <span className="kpi-delta neutral">unidades disponíveis</span>
+          </div>
         </div>
-        <div className="kpi-card">
-          <div className="kpi-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-          <div className="kpi-label">Valor do Estoque</div>
-          <div className="kpi-value" style={{ fontSize: 22 }}>{fmt(totalValue)}</div>
-          <div className="kpi-sub">a preço de venda</div>
+
+        <div className="kpi-item-sep" />
+
+        <div className="kpi-item">
+          <div className="kpi-item-icon green">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div className="kpi-item-body">
+            <div className="kpi-item-label">Valor do Estoque</div>
+            <div className="kpi-item-value">{fmt(totalValue)}</div>
+            <span className="kpi-delta neutral">a preço de venda</span>
+          </div>
         </div>
-        <div className="kpi-card">
-          <div className="kpi-icon amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-          <div className="kpi-label">Estoque Baixo</div>
-          <div className="kpi-value" style={{ color: lowCount > 0 ? 'var(--warning)' : undefined }}>{lowCount}</div>
-          <div className="kpi-sub">produtos com &lt; 5 unidades</div>
+
+        <div className="kpi-item-sep" />
+
+        <div className="kpi-item">
+          <div className="kpi-item-icon amber">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div className="kpi-item-body">
+            <div className="kpi-item-label">Estoque Baixo</div>
+            <div className="kpi-item-value" style={{ color: lowCount > 0 ? 'var(--warning)' : undefined }}>{lowCount}</div>
+            <span className="kpi-delta neutral">produtos &lt; 5 unidades</span>
+          </div>
         </div>
-        <div className="kpi-card">
-          <div className="kpi-icon red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
-          <div className="kpi-label">Sem Estoque</div>
-          <div className="kpi-value" style={{ color: zeroCount > 0 ? 'var(--danger)' : undefined }}>{zeroCount}</div>
-          <div className="kpi-sub">produtos zerados</div>
+
+        <div className="kpi-item-sep" />
+
+        <div className="kpi-item">
+          <div className="kpi-item-icon red">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          </div>
+          <div className="kpi-item-body">
+            <div className="kpi-item-label">Sem Estoque</div>
+            <div className="kpi-item-value" style={{ color: zeroCount > 0 ? 'var(--danger)' : undefined }}>{zeroCount}</div>
+            <span className={`kpi-delta ${zeroCount > 0 ? 'down' : 'neutral'}`}>produtos zerados</span>
+          </div>
         </div>
       </div>
 
@@ -167,11 +192,11 @@ export default function StockPosition() {
                 ))}
               </tbody>
               <tfoot>
-                <tr style={{ background: 'var(--primary-light)', fontWeight: 700 }}>
-                  <td colSpan={6} style={{ padding: '12px 16px', fontSize: 13 }}>TOTAIS</td>
-                  <td style={{ padding: '12px 16px', fontSize: 14, color: 'var(--primary)' }}>{totalUnits} un.</td>
+                <tr style={{ background: 'var(--primary)', fontWeight: 700 }}>
+                  <td colSpan={6} style={{ padding: '12px 18px', fontSize: 11, color: 'rgba(255,255,255,.70)', textTransform: 'uppercase', letterSpacing: '.8px' }}>Total</td>
+                  <td style={{ padding: '12px 18px', fontSize: 15, color: '#ffffff', fontWeight: 800 }}>{totalUnits} un.</td>
                   <td></td>
-                  <td style={{ padding: '12px 16px', fontSize: 14, color: 'var(--primary)' }}>{fmt(totalValue)}</td>
+                  <td style={{ padding: '12px 18px', fontSize: 15, color: '#ffffff', fontWeight: 800 }}>{fmt(totalValue)}</td>
                   <td></td>
                 </tr>
               </tfoot>
