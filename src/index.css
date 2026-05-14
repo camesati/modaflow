@@ -247,7 +247,56 @@ body {
 .topbar h2 { font-size: 15px; font-weight: 700; flex: 1; color: var(--text); letter-spacing: -.1px; }
 .page-content { padding: 28px; }
 
-/* ── KPI CARDS ── */
+/* ── KPI STRIP (Dashboard horizontal) ── */
+.kpi-strip {
+  display: flex; align-items: stretch;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.kpi-item {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 22px;
+}
+.kpi-item-sep {
+  width: 1px; background: var(--border); flex-shrink: 0; align-self: stretch;
+  margin: 14px 0;
+}
+.kpi-item-icon {
+  width: 38px; height: 38px; border-radius: var(--radius);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.kpi-item-icon.green   { background: var(--success-light); color: var(--success); }
+.kpi-item-icon.purple  { background: var(--surface-3);     color: var(--primary); }
+.kpi-item-icon.amber   { background: var(--accent-light);  color: var(--accent);  }
+.kpi-item-icon.blue    { background: var(--info-light);    color: var(--info);    }
+.kpi-item-icon.red     { background: var(--danger-light);  color: var(--danger);  }
+.kpi-item-icon.neutral { background: var(--surface-3);     color: var(--text-muted); }
+.kpi-item-body { min-width: 0; flex: 1; }
+.kpi-item-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--text-muted); margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kpi-item-value {
+  font-size: 20px; font-weight: 700;
+  color: var(--text); letter-spacing: -.5px;
+  line-height: 1.2; margin-bottom: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kpi-delta {
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+}
+.kpi-delta.up      { color: var(--success); }
+.kpi-delta.down    { color: var(--danger);  }
+.kpi-delta.neutral { color: var(--text-faint); }
+
+/* ── KPI CARDS (Reports page) ── */
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .kpi-card {
   background: var(--surface-1);

@@ -22,8 +22,24 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
+function pct(curr, prev) {
+  if (!prev) return null
+  return ((curr - prev) / prev * 100)
+}
+
+function Delta({ value, label }) {
+  if (value === null) return <span className="kpi-delta neutral">— vs {label}</span>
+  const up = value >= 0
+  const arrow = up ? '↑' : '↓'
+  return (
+    <span className={`kpi-delta ${up ? 'up' : 'down'}`}>
+      {arrow} {Math.abs(value).toFixed(1)}% vs {label}
+    </span>
+  )
+}
+
 export default function Dashboard() {
-  const [kpis, setKpis] = useState({ today: 0, month: 0, products: 0, customers: 0, lowStock: 0, salesCount: 0 })
+  const [kpis, setKpis] = useState({ today: 0, month: 0, prevMonth: 0, yesterday: 0, products: 0, customers: 0, lowStock: 0, salesCount: 0, prevCount: 0, ticket: 0, prevTicket: 0 })
   const [recentSales, setRecentSales] = useState([])
   const [dailyData, setDailyData] = useState([])
   const [paymentData, setPaymentData] = useState([])
@@ -36,13 +52,20 @@ export default function Dashboard() {
     const today = new Date().toISOString().split('T')[0]
     const monthStart = today.slice(0, 7) + '-01'
 
-    // Últimos 7 dias
+    const prevD = new Date(monthStart); prevD.setMonth(prevD.getMonth() - 1)
+    const prevMonthStart = prevD.toISOString().slice(0, 7) + '-01'
+
+    const yesterdayD = new Date(today); yesterdayD.setDate(yesterdayD.getDate() - 1)
+    const yesterday = yesterdayD.toISOString().split('T')[0]
+
     const d7 = new Date(); d7.setDate(d7.getDate() - 6)
     const week7Start = d7.toISOString().split('T')[0]
 
-    const [salesRes, todayRes, productsRes, customersRes, stockRes, recentRes, weekRes] = await Promise.all([
+    const [salesRes, todayRes, prevMonthRes, yesterdayRes, productsRes, customersRes, stockRes, recentRes, weekRes] = await Promise.all([
       supabase.from('sales').select('total_amount').gte('created_at', monthStart + 'T00:00:00'),
       supabase.from('sales').select('total_amount').gte('created_at', today + 'T00:00:00'),
+      supabase.from('sales').select('total_amount').gte('created_at', prevMonthStart + 'T00:00:00').lt('created_at', monthStart + 'T00:00:00'),
+      supabase.from('sales').select('total_amount').gte('created_at', yesterday + 'T00:00:00').lt('created_at', today + 'T00:00:00'),
       supabase.from('products').select('id', { count: 'exact', head: true }),
       supabase.from('customers').select('id', { count: 'exact', head: true }),
       supabase.from('products').select('quantity').lt('quantity', 5),
@@ -54,16 +77,22 @@ export default function Dashboard() {
         .gte('created_at', week7Start + 'T00:00:00'),
     ])
 
-    const monthTotal = (salesRes.data || []).reduce((s, x) => s + Number(x.total_amount), 0)
-    const todayTotal = (todayRes.data || []).reduce((s, x) => s + Number(x.total_amount), 0)
+    const monthTotal   = (salesRes.data     || []).reduce((s, x) => s + Number(x.total_amount), 0)
+    const todayTotal   = (todayRes.data     || []).reduce((s, x) => s + Number(x.total_amount), 0)
+    const prevTotal    = (prevMonthRes.data  || []).reduce((s, x) => s + Number(x.total_amount), 0)
+    const yestTotal    = (yesterdayRes.data  || []).reduce((s, x) => s + Number(x.total_amount), 0)
+    const salesCount   = (salesRes.data     || []).length
+    const prevCount    = (prevMonthRes.data  || []).length
 
     setKpis({
-      today: todayTotal,
-      month: monthTotal,
+      today: todayTotal, yesterday: yestTotal,
+      month: monthTotal, prevMonth: prevTotal,
       products: productsRes.count || 0,
       customers: customersRes.count || 0,
       lowStock: (stockRes.data || []).length,
-      salesCount: (salesRes.data || []).length,
+      salesCount, prevCount,
+      ticket: salesCount ? monthTotal / salesCount : 0,
+      prevTicket: prevCount ? prevTotal / prevCount : 0,
     })
     setRecentSales(recentRes.data || [])
 
@@ -113,39 +142,98 @@ export default function Dashboard() {
 
   return (
     <>
-      {/* KPIs */}
-      <div className="kpi-grid">
-        <div className="kpi-card">
-          <div className="kpi-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-          <div className="kpi-label">Vendas Hoje</div>
-          <div className="kpi-value">{fmt(kpis.today)}</div>
-          <div className="kpi-sub">dia atual</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-          <div className="kpi-label">Vendas no Mês</div>
-          <div className="kpi-value">{fmt(kpis.month)}</div>
-          <div className="kpi-sub">{kpis.salesCount} pedidos</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-icon amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
-          <div className="kpi-label">Produtos</div>
-          <div className="kpi-value">{kpis.products}</div>
-          <div className="kpi-sub">cadastrados</div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-          <div className="kpi-label">Clientes</div>
-          <div className="kpi-value">{kpis.customers}</div>
-          <div className="kpi-sub">cadastrados</div>
-        </div>
-        {kpis.lowStock > 0 && (
-          <div className="kpi-card">
-            <div className="kpi-icon red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-            <div className="kpi-label">Estoque Baixo</div>
-            <div className="kpi-value" style={{ color: 'var(--danger)' }}>{kpis.lowStock}</div>
-            <div className="kpi-sub">produtos &lt; 5 unidades</div>
+      {/* KPI Strip */}
+      <div className="kpi-strip">
+        <div className="kpi-item">
+          <div className="kpi-item-icon green">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           </div>
+          <div className="kpi-item-body">
+            <div className="kpi-item-label">Vendas Hoje</div>
+            <div className="kpi-item-value">{fmt(kpis.today)}</div>
+            <Delta value={pct(kpis.today, kpis.yesterday)} label="ontem" />
+          </div>
+        </div>
+
+        <div className="kpi-item-sep" />
+
+        <div className="kpi-item">
+          <div className="kpi-item-icon purple">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div className="kpi-item-body">
+            <div className="kpi-item-label">Vendas no Mês</div>
+            <div className="kpi-item-value">{fmt(kpis.month)}</div>
+            <Delta value={pct(kpis.month, kpis.prevMonth)} label="mês anterior" />
+          </div>
+        </div>
+
+        <div className="kpi-item-sep" />
+
+        <div className="kpi-item">
+          <div className="kpi-item-icon amber">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <div className="kpi-item-body">
+            <div className="kpi-item-label">Ticket Médio</div>
+            <div className="kpi-item-value">{fmt(kpis.ticket)}</div>
+            <Delta value={pct(kpis.ticket, kpis.prevTicket)} label="mês anterior" />
+          </div>
+        </div>
+
+        <div className="kpi-item-sep" />
+
+        <div className="kpi-item">
+          <div className="kpi-item-icon blue">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          </div>
+          <div className="kpi-item-body">
+            <div className="kpi-item-label">Pedidos no Mês</div>
+            <div className="kpi-item-value">{kpis.salesCount}</div>
+            <Delta value={pct(kpis.salesCount, kpis.prevCount)} label="mês anterior" />
+          </div>
+        </div>
+
+        <div className="kpi-item-sep" />
+
+        <div className="kpi-item">
+          <div className="kpi-item-icon neutral">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+          <div className="kpi-item-body">
+            <div className="kpi-item-label">Produtos</div>
+            <div className="kpi-item-value">{kpis.products}</div>
+            <span className="kpi-delta neutral">cadastrados</span>
+          </div>
+        </div>
+
+        <div className="kpi-item-sep" />
+
+        <div className="kpi-item">
+          <div className="kpi-item-icon neutral">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div className="kpi-item-body">
+            <div className="kpi-item-label">Clientes</div>
+            <div className="kpi-item-value">{kpis.customers}</div>
+            <span className="kpi-delta neutral">cadastrados</span>
+          </div>
+        </div>
+
+        {kpis.lowStock > 0 && (
+          <>
+            <div className="kpi-item-sep" />
+            <div className="kpi-item">
+              <div className="kpi-item-icon red">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div className="kpi-item-body">
+                <div className="kpi-item-label">Estoque Baixo</div>
+                <div className="kpi-item-value" style={{ color: 'var(--danger)' }}>{kpis.lowStock}</div>
+                <span className="kpi-delta down">produtos &lt; 5 un.</span>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
