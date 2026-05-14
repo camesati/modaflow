@@ -154,7 +154,11 @@ body {
 .sidebar-logo {
   padding: 24px 20px 20px;
   border-bottom: 1px solid rgba(255,255,255,.08);
+  cursor: pointer;
+  user-select: none;
+  transition: background .15s ease;
 }
+.sidebar-logo:hover { background: rgba(255,255,255,.04); }
 .sidebar-logo h1 {
   font-family: 'DM Serif Display', Georgia, serif;
   font-size: 22px;
@@ -230,7 +234,38 @@ body {
 .btn-logout { background: none; border: none; cursor: pointer; color: rgba(255,255,255,.30); padding: 4px; border-radius: 2px; display: flex; align-items: center; transition: color .15s; }
 .btn-logout:hover { color: #fca5a5; }
 
-.main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
+.sidebar { transition: width .22s cubic-bezier(.4,0,.2,1); }
+.main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; transition: margin-left .22s cubic-bezier(.4,0,.2,1); }
+
+/* ── SIDEBAR COLLAPSED ── */
+.layout.collapsed .sidebar { width: 64px; }
+.layout.collapsed .main    { margin-left: 64px; }
+
+.layout.collapsed .sidebar-logo {
+  padding: 20px 0;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.layout.collapsed .sidebar-logo h1 { font-size: 18px; }
+
+.layout.collapsed .sidebar-nav { padding: 8px 6px; }
+.layout.collapsed .nav-section { display: none; }
+.layout.collapsed .nav-item {
+  justify-content: center;
+  padding: 10px 0;
+  gap: 0;
+}
+.layout.collapsed .nav-label { display: none; }
+.layout.collapsed .nav-item svg { width: 18px; height: 18px; opacity: .7; }
+.layout.collapsed .nav-item.active svg { opacity: 1; }
+
+.layout.collapsed .sidebar-footer { padding: 12px 6px; }
+.layout.collapsed .user-info {
+  justify-content: center; gap: 0; padding: 8px 0;
+}
+.layout.collapsed .user-name  { display: none; }
+.layout.collapsed .btn-logout { display: none; }
 
 .topbar {
   height: 60px;

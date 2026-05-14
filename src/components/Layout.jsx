@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { useApp } from '../App'
 
@@ -18,31 +19,44 @@ const PAGE_TITLES = { dashboard: 'Dashboard', pdv: 'PDV — Nova Venda', stock: 
 
 export default function Layout({ children, page, setPage }) {
   const { session, theme, toggleTheme } = useApp()
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mf-sidebar-collapsed') === 'true')
   const email = session?.user?.email || ''
   const initials = email.slice(0, 2).toUpperCase()
+
+  function toggleSidebar() {
+    setCollapsed(c => {
+      localStorage.setItem('mf-sidebar-collapsed', String(!c))
+      return !c
+    })
+  }
 
   async function logout() {
     await supabase.auth.signOut()
   }
 
-  let lastSection = null
+  const lastSectionRef = useRef(null)
+  lastSectionRef.current = null
   return (
-    <div className="layout">
+    <div className={`layout${collapsed ? ' collapsed' : ''}`}>
       <aside className="sidebar">
-        <div className="sidebar-logo">
-          <h1>Moda<span>Flow</span></h1>
-          <p>Gestão de Loja</p>
+        <div className="sidebar-logo" onClick={toggleSidebar} title={collapsed ? 'Expandir menu' : 'Recolher menu'}>
+          <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}>
+            {collapsed
+              ? <><span style={{ color: 'var(--accent)' }}>M</span>F</>
+              : <>Moda<span>Flow</span></>}
+          </h1>
+          {!collapsed && <p>Gestão de Loja</p>}
         </div>
         <nav className="sidebar-nav">
           {MENU.map(item => {
-            const showSection = item.section && item.section !== lastSection
-            if (item.section) lastSection = item.section
+            const showSection = item.section && item.section !== lastSectionRef.current
+            if (item.section) lastSectionRef.current = item.section
             return (
               <div key={item.key}>
                 {showSection && <div className="nav-section">{item.section}</div>}
-                <button className={`nav-item ${page === item.key ? 'active' : ''}`} onClick={() => setPage(item.key)}>
+                <button className={`nav-item ${page === item.key ? 'active' : ''}`} onClick={() => setPage(item.key)} title={collapsed ? item.label : ''}>
                   {item.icon}
-                  {item.label}
+                  <span className="nav-label">{item.label}</span>
                 </button>
               </div>
             )
@@ -60,7 +74,7 @@ export default function Layout({ children, page, setPage }) {
       </aside>
       <main className="main">
         <div className="topbar">
-          <h2>{PAGE_TITLES[page] || page}</h2>
+          <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif" }}>{PAGE_TITLES[page] || page}</h2>
           <button className="theme-toggle" onClick={toggleTheme} title={theme === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}>
             {theme === 'light' ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
