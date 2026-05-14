@@ -373,9 +373,9 @@ body {
   background: var(--surface-1);
   border-radius: var(--radius-lg);
   box-shadow:
-    0 2px 4px rgba(28,25,23,.07),
-    0 6px 20px rgba(28,25,23,.09),
-    0 0 0 1px rgba(28,25,23,.06);
+    0 2px 6px rgba(28,25,23,.14),
+    0 8px 28px rgba(28,25,23,.16),
+    0 0 0 1px rgba(28,25,23,.12);
   overflow: hidden;
 }
 .card-header {
@@ -391,9 +391,9 @@ body {
   overflow-x: auto;
   border-radius: var(--radius-lg);
   box-shadow:
-    0 2px 4px rgba(28,25,23,.07),
-    0 6px 20px rgba(28,25,23,.09),
-    0 0 0 1px rgba(28,25,23,.06);
+    0 2px 6px rgba(28,25,23,.14),
+    0 8px 28px rgba(28,25,23,.16),
+    0 0 0 1px rgba(28,25,23,.12);
 }
 table { width: 100%; border-collapse: collapse; }
 th {
