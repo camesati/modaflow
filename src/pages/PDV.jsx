@@ -223,7 +223,10 @@ export default function PDV() {
     <>
       <form onSubmit={finalize}>
         <div className="pdv-grid">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* ── COLUNA ESQUERDA ── */}
+          <div className="pdv-left">
+            {/* Buscar Produto */}
             <div className="card" style={{ overflow: 'visible' }}>
               <div className="card-header"><h3>Buscar Produto</h3></div>
               <div style={{ padding: 16, position: 'relative' }}>
@@ -232,7 +235,7 @@ export default function PDV() {
                   <input ref={searchRef} placeholder="Digite SKU ou nome do produto..." value={search} onChange={e => setSearch(e.target.value)} autoFocus />
                 </div>
                 {filtered.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 16, right: 16, background: 'white', border: '1px solid var(--border)', borderRadius: 8, boxShadow: 'var(--shadow-md)', zIndex: 100, overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 16, right: 16, background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: 'var(--shadow-md)', zIndex: 100, overflow: 'hidden' }}>
                     {filtered.map(p => (
                       <div key={p.id} onClick={() => addItem(p)} style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-light)'}
@@ -246,6 +249,7 @@ export default function PDV() {
               </div>
             </div>
 
+            {/* Itens da Venda */}
             <div className="pdv-items">
               <div className="card-header"><h3>Itens da Venda ({items.length})</h3></div>
               {items.length === 0 ? (
@@ -276,51 +280,57 @@ export default function PDV() {
             </div>
           </div>
 
-          <div className="pdv-panel">
+          {/* ── COLUNA DIREITA ── */}
+          <div className="pdv-right">
+            {/* Total — alinha com Buscar Produto */}
             <div className="pdv-total">
               <p>Total da Venda</p>
               <h2>{fmt(total)}</h2>
               <p style={{ marginTop: 4 }}>{items.reduce((s, x) => s + x.qty, 0)} itens</p>
             </div>
 
-            <div className="form-group">
-              <label>Forma de Pagamento *</label>
-              <select value={sale.payment_method_id} onChange={setSaleField('payment_method_id')} required>
-                <option value="">Selecione...</option>
-                {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.name}</option>)}
-              </select>
+            {/* Formulário — sticky panel abaixo do total */}
+            <div className="pdv-panel">
+              <div className="form-group">
+                <label>Forma de Pagamento *</label>
+                <select value={sale.payment_method_id} onChange={setSaleField('payment_method_id')} required>
+                  <option value="">Selecione...</option>
+                  {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.name}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Vendedor</label>
+                <select value={sale.seller_id} onChange={setSaleField('seller_id')}>
+                  <option value="">Selecione...</option>
+                  {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Cliente</label>
+                <select value={sale.customer_id} onChange={setSaleField('customer_id')}>
+                  <option value="">Consumidor final</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Observações</label>
+                <textarea placeholder="Opcional..." value={sale.notes} onChange={setSaleField('notes')} rows={2} />
+              </div>
+
+              <button type="submit" className="btn btn-success w-full" style={{ justifyContent: 'center', padding: 14, fontSize: 15 }} disabled={saving || items.length === 0}>
+                {saving ? <span className="spinner" /> : '✓ Finalizar Venda'}
+              </button>
+
+              <button type="button" className="btn btn-ghost w-full" style={{ justifyContent: 'center' }}
+                onClick={() => { setItems([]); setSale({ customer_id: '', seller_id: '', payment_method_id: '', notes: '' }) }}>
+                Limpar
+              </button>
             </div>
-
-            <div className="form-group">
-              <label>Vendedor</label>
-              <select value={sale.seller_id} onChange={setSaleField('seller_id')}>
-                <option value="">Selecione...</option>
-                {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Cliente</label>
-              <select value={sale.customer_id} onChange={setSaleField('customer_id')}>
-                <option value="">Consumidor final</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Observações</label>
-              <textarea placeholder="Opcional..." value={sale.notes} onChange={setSaleField('notes')} rows={2} />
-            </div>
-
-            <button type="submit" className="btn btn-success w-full" style={{ justifyContent: 'center', padding: 14, fontSize: 15 }} disabled={saving || items.length === 0}>
-              {saving ? <span className="spinner" /> : '✓ Finalizar Venda'}
-            </button>
-
-            <button type="button" className="btn btn-ghost w-full" style={{ justifyContent: 'center' }}
-              onClick={() => { setItems([]); setSale({ customer_id: '', seller_id: '', payment_method_id: '', notes: '' }) }}>
-              Limpar
-            </button>
           </div>
+
         </div>
       </form>
 
